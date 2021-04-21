@@ -1,3 +1,4 @@
+extern crate find_folder;
 extern crate image;
 extern crate piston_window;
 
@@ -5,6 +6,7 @@ use image::*;
 use piston_window::*;
 
 use rand::distributions::{Distribution, Uniform};
+use std::time::{Instant};
 
 fn main() {
     const WINDOW_WIDTH: u32 = 1050;
@@ -14,6 +16,7 @@ fn main() {
     //const FERN_COLOR: [f32; 4] = [0.05, 0.79, 0.1, 1.0];
     const FERN_COLOR: [u8; 4] = [40, 150, 114, 255];
     const FERN_COLOR_BACKGROUND: [u8; 4] = [54, 69, 71, 255];
+    const FONT_COLOR: [f32; 4] = [0.92, 0.92, 0.92, 1.0];
 
     /*
      * Window setup
@@ -24,139 +27,317 @@ fn main() {
         .unwrap();
 
     /*
+     * Font loading
+     */
+    let assets = find_folder::Search::ParentsThenKids(3, 3)
+        .for_folder("assets")
+        .unwrap();
+    let mut glyphs = window
+        .load_font(assets.join("font/RobotoCondensed-Light.ttf"))
+        .unwrap();
+
+    glyphs.preload_printable_ascii(15).unwrap();
+
+    /*
+     * Text variables setup
+     */
+    let mut average_frame_time_string: String ;
+    let mut max_frame_time_string: String;
+
+    /*
+     * Fern values setup
+     */
+    let temp_fern_image: RgbaImage = ImageBuffer::new(WINDOW_WIDTH, WINDOW_HEIGHT);
+    let temp_fern_coords: Vec<[u32; 2]> = Vec::new();
+
+    let temp_fern_values: FernValues = FernValues {
+        current_img: temp_fern_image,
+        current_x: 0.0,
+        current_y: 0.0,
+        current_calculated_coords: temp_fern_coords,
+    };
+    let mut fern: Fern = Fern {
+        values: temp_fern_values,
+        background_drawn: false,
+    };
+
+    /*
      * Fern render setup
      */
-    let mut texture_settings: TextureSettings = TextureSettings::new();
-    let mut fern_image = gen_fern(
-        650000,
+    let fern_texture_settings: TextureSettings = TextureSettings::new();
+    let window_texture_context = &mut window.create_texture_context();
+    let mut fern_texture = fern.get_render_target(window_texture_context, fern_texture_settings);
+    fern.gen_fern(
+        100,
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
         FERN_COLOR,
         FERN_COLOR_BACKGROUND,
         false,
     );
-    let fern_texture: G2dTexture = Texture::from_image(
-        &mut window.create_texture_context(),
-        &fern_image,
-        &texture_settings,
-    )
-    .unwrap();
 
     /*
-    * Main loop
-    */
+     * Timing system setup
+     */
+    const TICK_TIME: u128 = 10;
+    const MAX_SAVED_FRAME_TIMES: u64 = 30;
+
+    let mut tick_clock = Instant::now();
+
+    let mut time_stamp_frame_start: Instant;
+    let mut _time_stamp_frame_end: Instant = Instant::now();
+
+    let mut current_frame_time_ms: u128 = 0;
+    let mut last_frame_times_ms: Vec<u128> = Vec::new();
+    let mut average_frame_time: u128 = 0;
+    let mut max_frame_time: u128 = 0;
+
+    /*
+     * Main loop
+     */
     while let Some(event) = window.next() {
+        time_stamp_frame_start = Instant::now();
+
         /*
-        * Rendering
-        */
-        window.draw_2d(&event, |context, graphics, _device| {
-            clear(CLEAR_COLOR, graphics);
-
-            image(&fern_texture, context.transform, graphics);
-        });
-    }
-}
-
-fn gen_fern(
-    iterations: u64,
-    width: u32,
-    height: u32,
-    color: [u8; 4],
-    background_color: [u8; 4],
-    save_file: bool,
-) -> RgbaImage {
-    /*
-     * Plot values setup
-     */
-    let mut img: RgbaImage = ImageBuffer::new(width, height);
-
-    let mut plot_x: f64 = 0.0;
-    let mut plot_y: f64 = 0.0;
-
-    let mut cur_x: f64 = 0.0;
-    let mut cur_y: f64 = 0.0;
-
-    let mut next_x: f64 = 0.0;
-    let mut next_y: f64 = 0.0;
-
-    let mut fractal_stage: u8 = 0;
-
-    let mut render_pixel_coords: Vec<[u32; 2]> = Vec::new();
-
-    /*
-     * Random setup
-     */
-    let mut random_gen = rand::thread_rng();
-    let random_range = Uniform::from(1..1000000000);
-
-    let mut random_num: f32 = 0.0;
-
-    /*
-     * Image background set
-     */
-    for (x, y, pixel) in img.enumerate_pixels_mut() {
-        *pixel = image::Rgba(background_color);
-    }
-
-    /*
-     * Generation
-     */
-    for i in 0..iterations {
-        /*
-         * Random number sample
+         * Fern update
          */
-        random_num = (random_range.sample(&mut random_gen) as f32) * 0.000000001;
+        if tick_clock.elapsed().as_millis() >= TICK_TIME {
+            fern.gen_fern(
+                1000,
+                WINDOW_WIDTH,
+                WINDOW_HEIGHT,
+                FERN_COLOR,
+                FERN_COLOR_BACKGROUND,
+                false,
+            );
 
-        /*
-         * Magic
-         */
-        if random_num < 0.01 {
-            next_x = 0.0;
-            next_y = 0.16 * cur_y;
-            fractal_stage = 0;
-        } else if random_num < 0.86 {
-            next_x = 0.85 * cur_x + 0.04 * cur_y;
-            next_y = -0.04 * cur_x + 0.85 * cur_y + 1.6;
-            fractal_stage = 1;
-        } else if random_num < 0.93 {
-            next_x = 0.20 * cur_x - 0.26 * cur_y;
-            next_y = 0.23 * cur_x + 0.22 * cur_y + 1.6;
-            fractal_stage = 2;
-        } else {
-            next_x = -0.15 * cur_x + 0.28 * cur_y;
-            next_y = 0.26 * cur_x + 0.24 * cur_y + 0.44;
-            fractal_stage = 3;
+            tick_clock = Instant::now();
         }
 
         /*
-         * Scaling, assignment
+         * Max frame time calculation
          */
-        plot_x = width as f64 * (cur_x + 3.0) / 6.0;
-        plot_y = height as f64 - height as f64 * ((cur_y + 2.0) / 14.0);
-
-        cur_x = next_x;
-        cur_y = next_y;
+        if average_frame_time > 0
+            && last_frame_times_ms.len() > 1
+            && last_frame_times_ms[last_frame_times_ms.len() - 1] < current_frame_time_ms
+            && current_frame_time_ms > max_frame_time
+        {
+            max_frame_time = current_frame_time_ms;
+        }
 
         /*
-         * Save targeted pixel coords
+         * Average frame time calculation
          */
-        render_pixel_coords.push([plot_x as u32, plot_y as u32]);
+        if last_frame_times_ms.len() as u64 > MAX_SAVED_FRAME_TIMES {
+            let mut combined_frame_times: u128 = 0;
+
+            for time_ms in last_frame_times_ms.iter() {
+                combined_frame_times += time_ms
+            }
+
+            average_frame_time = combined_frame_times / MAX_SAVED_FRAME_TIMES as u128;
+
+            last_frame_times_ms.clear();
+        } else {
+            last_frame_times_ms.push(current_frame_time_ms);
+        }
+
+        /*
+         * Text variables update
+         */
+        average_frame_time_string =
+            "Average frame time: ".to_string() + &average_frame_time.to_string().to_owned() + "ms";
+        max_frame_time_string =
+            "Max frame time: ".to_string() + &max_frame_time.to_string().to_owned() + "ms";
+
+        /*
+         * Rendering
+         */
+        window.draw_2d(&event, |context, graphics, _device| {
+            clear(CLEAR_COLOR, graphics);
+            /*
+             * Fern image render
+             */
+            fern_texture = fern.get_render_target(window_texture_context, fern_texture_settings);
+            image(&fern_texture, context.transform, graphics);
+
+            /*
+             * Text render
+             */
+            glyphs.factory.encoder.flush(_device);
+
+            /*
+            ? Caption
+            */
+            text::Text::new_color(FONT_COLOR, 22)
+                .draw(
+                    "Barnsley Fern",
+                    &mut glyphs,
+                    &context.draw_state,
+                    context.transform.trans(5.0, 23.0),
+                    graphics,
+                )
+                .unwrap();
+
+            /*
+            ? Average frame time
+            */
+            text::Text::new_color(FONT_COLOR, 15)
+                .draw(
+                    &average_frame_time_string,
+                    &mut glyphs,
+                    &context.draw_state,
+                    context.transform.trans(8.0, 55.0),
+                    graphics,
+                )
+                .unwrap();
+
+            /*
+            ? Max frame time
+            */
+            text::Text::new_color(FONT_COLOR, 15)
+                .draw(
+                    &max_frame_time_string,
+                    &mut glyphs,
+                    &context.draw_state,
+                    context.transform.trans(8.0, 80.0),
+                    graphics,
+                )
+                .unwrap();
+        });
+
+        /*
+         * Frame time calculation
+         */
+        _time_stamp_frame_end = Instant::now();
+
+        current_frame_time_ms = _time_stamp_frame_end
+            .saturating_duration_since(time_stamp_frame_start)
+            .as_millis();
+    }
+}
+
+struct Fern {
+    pub values: FernValues,
+    pub background_drawn: bool,
+}
+impl Fern {
+    pub fn gen_fern(
+        &mut self,
+        iterations: u64,
+        width: u32,
+        height: u32,
+        color: [u8; 4],
+        background_color: [u8; 4],
+        save_file: bool,
+    ) {
+        /*
+         * Plot values setup
+         */
+        let mut plot_x: f64;
+        let mut plot_y: f64;
+
+        let mut next_x: f64;
+        let mut next_y: f64;
+
+        self.values.current_calculated_coords.clear();
+
+        /*
+         * Random setup
+         */
+        let mut random_gen = rand::thread_rng();
+        let random_range = Uniform::from(1..1000000000);
+
+        let mut random_num: f32;
+
+        /*
+         * Image background set
+         */
+        if !self.background_drawn {
+            for (_, _, pixel) in self.values.current_img.enumerate_pixels_mut() {
+                *pixel = image::Rgba(background_color);
+            }
+            self.background_drawn = true;
+        }
+
+        /*
+         * Generation
+         */
+        for _ in 0..iterations {
+            /*
+             * Random number sample
+             */
+            random_num = (random_range.sample(&mut random_gen) as f32) * 0.000000001;
+
+            /*
+             * Magic
+             */
+            if random_num < 0.01 {
+                next_x = 0.0;
+                next_y = 0.16 * self.values.current_y;
+            } else if random_num < 0.86 {
+                next_x = 0.85 * self.values.current_x + 0.04 * self.values.current_y;
+                next_y = -0.04 * self.values.current_x + 0.85 * self.values.current_y + 1.6;
+            } else if random_num < 0.93 {
+                next_x = 0.20 * self.values.current_x - 0.26 * self.values.current_y;
+                next_y = 0.23 * self.values.current_x + 0.22 * self.values.current_y + 1.6;
+            } else {
+                next_x = -0.15 * self.values.current_x + 0.28 * self.values.current_y;
+                next_y = 0.26 * self.values.current_x + 0.24 * self.values.current_y + 0.44;
+            }
+
+            /*
+             * Scaling, assignment
+             */
+            plot_x = width as f64 * (self.values.current_x + 3.0) / 6.0;
+            plot_y = height as f64 - height as f64 * ((self.values.current_y + 2.0) / 14.0);
+
+            self.values.current_x = next_x;
+            self.values.current_y = next_y;
+
+            /*
+             * Save targeted pixel coords
+             */
+            self.values
+                .current_calculated_coords
+                .push([plot_x as u32, plot_y as u32]);
+        }
+
+        /*
+         * Write targeted pixels
+         */
+        for pix_coord in self.values.current_calculated_coords.iter() {
+            self.values
+                .current_img
+                .put_pixel(pix_coord[0], pix_coord[1], image::Rgba(color));
+        }
+
+        /*
+         * Save copy of image
+         */
+        if save_file {
+            self.values
+                .current_img
+                .save(format!("fern{}x{}_iter_{}.png", width, height, iterations))
+                .unwrap();
+        }
     }
 
-    /*
-     * Render targeted pixels
-     */
-    for pix_coord in render_pixel_coords.iter() {
-        img.put_pixel(pix_coord[0], pix_coord[1], image::Rgba(color));
+    fn get_render_target(
+        &self,
+        texture_context: &mut G2dTextureContext,
+        texture_settings: TextureSettings,
+    ) -> G2dTexture {
+        let fern_texture: G2dTexture =
+            Texture::from_image(texture_context, &self.values.current_img, &texture_settings)
+                .unwrap();
+        return fern_texture;
     }
+}
 
-    /*
-     * Save copy of image
-     */
-    if save_file {
-        img.save(format!("fern{}x{}_iter_{}.png", width, height, iterations))
-            .unwrap();
-    }
-
-    return img;
+struct FernValues {
+    pub current_img: RgbaImage,
+    pub current_calculated_coords: Vec<[u32; 2]>,
+    pub current_x: f64,
+    pub current_y: f64,
 }
