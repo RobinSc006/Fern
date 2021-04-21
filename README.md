@@ -6,6 +6,9 @@ I did this as a quick, fun project for myself and as an exercise to practice rus
 but I didn't have any public repositories, so I thought I'd just 
 showcase a few of my personal projects, this one included. 
 
+
+Pressing the spacebar will un/pause the generation.
+
 ## Screenshot
 ![fern_live_gen](https://user-images.githubusercontent.com/57567946/115565145-69a4f580-a2b9-11eb-968c-5edbb2e859b2.png)
 This is a screenshot of the program generating the fractal, 1,000 iterations every 10ms.
