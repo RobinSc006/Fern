@@ -6,7 +6,7 @@ use image::*;
 use piston_window::*;
 
 use rand::distributions::{Distribution, Uniform};
-use std::time::{Instant};
+use std::time::Instant;
 
 fn main() {
     const WINDOW_WIDTH: u32 = 1050;
@@ -41,14 +41,16 @@ fn main() {
     /*
      * Text variables setup
      */
-    let mut average_frame_time_string: String ;
+    let mut average_frame_time_string: String;
     let mut max_frame_time_string: String;
+    let mut iterated_count_text: String;
 
     /*
      * Fern values setup
      */
     let temp_fern_image: RgbaImage = ImageBuffer::new(WINDOW_WIDTH, WINDOW_HEIGHT);
     let temp_fern_coords: Vec<[u32; 2]> = Vec::new();
+    let temp_fern_iterated_count: u128 = 0;
 
     let temp_fern_values: FernValues = FernValues {
         current_img: temp_fern_image,
@@ -59,6 +61,7 @@ fn main() {
     let mut fern: Fern = Fern {
         values: temp_fern_values,
         background_drawn: false,
+        iterated_count: temp_fern_iterated_count,
     };
 
     /*
@@ -92,6 +95,8 @@ fn main() {
     let mut average_frame_time: u128 = 0;
     let mut max_frame_time: u128 = 0;
 
+    let mut generation_paused: bool = false;
+
     /*
      * Main loop
      */
@@ -99,9 +104,30 @@ fn main() {
         time_stamp_frame_start = Instant::now();
 
         /*
+        * Input
+        */
+        if let Some(button) = event.release_args() {
+            match button {
+                Button::Keyboard(key) => {
+                    if key == Key::Space {
+                        if generation_paused {
+                            generation_paused = false;
+                        }
+                        else {
+                            generation_paused = true;
+                        }
+                    } 
+                },
+                Button::Mouse(_) => {}
+                Button::Controller(_) => {}
+                Button::Hat(_) => {}
+            }
+        }
+
+        /*
          * Fern update
          */
-        if tick_clock.elapsed().as_millis() >= TICK_TIME {
+        if tick_clock.elapsed().as_millis() >= TICK_TIME && !generation_paused {
             fern.gen_fern(
                 1000,
                 WINDOW_WIDTH,
@@ -149,6 +175,8 @@ fn main() {
             "Average frame time: ".to_string() + &average_frame_time.to_string().to_owned() + "ms";
         max_frame_time_string =
             "Max frame time: ".to_string() + &max_frame_time.to_string().to_owned() + "ms";
+        iterated_count_text =
+            "Iterations: ".to_string() + &fern.iterated_count.to_string().to_owned();
 
         /*
          * Rendering
@@ -204,6 +232,19 @@ fn main() {
                     graphics,
                 )
                 .unwrap();
+
+            /*
+            ? Total iterations
+            */
+            text::Text::new_color(FONT_COLOR, 15)
+                .draw(
+                    &iterated_count_text,
+                    &mut glyphs,
+                    &context.draw_state,
+                    context.transform.trans(8.0, 105.0),
+                    graphics,
+                )
+                .unwrap();
         });
 
         /*
@@ -220,6 +261,7 @@ fn main() {
 struct Fern {
     pub values: FernValues,
     pub background_drawn: bool,
+    pub iterated_count: u128,
 }
 impl Fern {
     pub fn gen_fern(
@@ -263,6 +305,8 @@ impl Fern {
         /*
          * Generation
          */
+        self.iterated_count += iterations as u128;
+
         for _ in 0..iterations {
             /*
              * Random number sample
