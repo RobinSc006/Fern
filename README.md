@@ -1,5 +1,5 @@
 # Fern
-A live Barnsley's Fern plotter. That's it.
+A live Barnsley Fern plotter. That's it.
 
 # Info
 I did this as a quick, fun project for myself and as an exercise to practice rust, 
