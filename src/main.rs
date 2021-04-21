@@ -16,9 +16,11 @@ fn main() {
 
     const FERN_COLOR_OPT_ONE: [u8; 4] = [51, 153, 137, 255];
     const FERN_COLOR_OPT_TWO: [u8; 4] = [0, 108, 103, 255]; 
+    const FERN_COLOR_OPT_THREE: [u8; 4] = [40, 150, 114, 255]; 
 
     const FERN_BACKGROUND_COLOR_OPT_ONE: [u8; 4] = [43, 44, 40, 255];
     const FERN_BACKGROUND_COLOR_OPT_TWO: [u8; 4] = [19, 21, 21, 255];
+    const FERN_BACKGROUND_COLOR_OPT_THREE: [u8; 4] = [54, 69, 71, 255];
 
     const FONT_COLOR: [f32; 4] = [0.92, 0.92, 0.92, 1.0];
 
@@ -137,6 +139,11 @@ fn main() {
                         fern.reset();
                         current_fern_color = FERN_COLOR_OPT_TWO;
                         current_fern_background_color = FERN_BACKGROUND_COLOR_OPT_TWO;
+                    }
+                    else if key == Key::D3 {
+                        fern.reset();
+                        current_fern_color = FERN_COLOR_OPT_THREE;
+                        current_fern_background_color = FERN_BACKGROUND_COLOR_OPT_THREE;
                     }
                 }
                 Button::Mouse(_) => {}
@@ -415,6 +422,3 @@ struct FernValues {
     pub current_x: f64,
     pub current_y: f64,
 }
-
-
-// Coincidence? I think not.
