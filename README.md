@@ -11,7 +11,7 @@ Pressing the spacebar un/pauses the generation.
 
 R resets the generation.
 
-Keys 1, 2 change the color scheme. 
+Keys 1..3 change the color scheme. 
 
 ## Screenshot
 ![example_fern](https://user-images.githubusercontent.com/57567946/115588180-c4951780-a2ce-11eb-9eb0-054467d474a7.png)
