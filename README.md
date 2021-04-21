@@ -8,7 +8,9 @@ showcase a few of my personal projects, this one included.
 
 
 Pressing the spacebar un/pauses the generation.
+
 R resets the generation.
+
 Keys 1, 2 change the color scheme. 
 
 ## Screenshot
