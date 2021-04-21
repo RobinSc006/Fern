@@ -12,10 +12,14 @@ fn main() {
     const WINDOW_WIDTH: u32 = 1050;
     const WINDOW_HEIGHT: u32 = 1050;
 
-    const CLEAR_COLOR: [f32; 4] = [0.89; 4];
-    //const FERN_COLOR: [f32; 4] = [0.05, 0.79, 0.1, 1.0];
-    const FERN_COLOR: [u8; 4] = [40, 150, 114, 255];
-    const FERN_COLOR_BACKGROUND: [u8; 4] = [54, 69, 71, 255];
+    const CLEAR_COLOR: [f32; 4] = [1.0; 4];
+
+    const FERN_COLOR_OPT_ONE: [u8; 4] = [51, 153, 137, 255];
+    const FERN_COLOR_OPT_TWO: [u8; 4] = [0, 108, 103, 255]; 
+
+    const FERN_BACKGROUND_COLOR_OPT_ONE: [u8; 4] = [43, 44, 40, 255];
+    const FERN_BACKGROUND_COLOR_OPT_TWO: [u8; 4] = [19, 21, 21, 255];
+
     const FONT_COLOR: [f32; 4] = [0.92, 0.92, 0.92, 1.0];
 
     /*
@@ -67,15 +71,20 @@ fn main() {
     /*
      * Fern render setup
      */
-    let fern_texture_settings: TextureSettings = TextureSettings::new();
     let window_texture_context = &mut window.create_texture_context();
+
+    let fern_texture_settings: TextureSettings = TextureSettings::new();
     let mut fern_texture = fern.get_render_target(window_texture_context, fern_texture_settings);
+
+    let mut current_fern_color: [u8; 4] = FERN_COLOR_OPT_ONE;
+    let mut current_fern_background_color: [u8; 4] = FERN_BACKGROUND_COLOR_OPT_ONE;
+
     fern.gen_fern(
         100,
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
-        FERN_COLOR,
-        FERN_COLOR_BACKGROUND,
+        current_fern_color,
+        current_fern_background_color,
         false,
     );
 
@@ -90,8 +99,8 @@ fn main() {
     let mut time_stamp_frame_start: Instant;
     let mut _time_stamp_frame_end: Instant = Instant::now();
 
-    let mut current_frame_time_ms: u128 = 0;
-    let mut last_frame_times_ms: Vec<u128> = Vec::new();
+    let mut current_frame_time_us: u128 = 0;
+    let mut last_frame_times_us: Vec<u128> = Vec::new();
     let mut average_frame_time: u128 = 0;
     let mut max_frame_time: u128 = 0;
 
@@ -104,20 +113,32 @@ fn main() {
         time_stamp_frame_start = Instant::now();
 
         /*
-        * Input
-        */
+         * Input
+         */
         if let Some(button) = event.release_args() {
             match button {
                 Button::Keyboard(key) => {
                     if key == Key::Space {
                         if generation_paused {
                             generation_paused = false;
-                        }
-                        else {
+                        } else {
                             generation_paused = true;
                         }
-                    } 
-                },
+                    }
+                    else if key == Key::R {
+                        fern.reset();
+                    }
+                    else if key == Key::D1 {
+                        fern.reset();
+                        current_fern_color = FERN_COLOR_OPT_ONE;
+                        current_fern_background_color = FERN_BACKGROUND_COLOR_OPT_ONE;
+                    }
+                    else if key == Key::D2 {
+                        fern.reset();
+                        current_fern_color = FERN_COLOR_OPT_TWO;
+                        current_fern_background_color = FERN_BACKGROUND_COLOR_OPT_TWO;
+                    }
+                }
                 Button::Mouse(_) => {}
                 Button::Controller(_) => {}
                 Button::Hat(_) => {}
@@ -132,8 +153,8 @@ fn main() {
                 1000,
                 WINDOW_WIDTH,
                 WINDOW_HEIGHT,
-                FERN_COLOR,
-                FERN_COLOR_BACKGROUND,
+                current_fern_color,
+                current_fern_background_color,
                 false,
             );
 
@@ -144,37 +165,37 @@ fn main() {
          * Max frame time calculation
          */
         if average_frame_time > 0
-            && last_frame_times_ms.len() > 1
-            && last_frame_times_ms[last_frame_times_ms.len() - 1] < current_frame_time_ms
-            && current_frame_time_ms > max_frame_time
+            && last_frame_times_us.len() > 1
+            && last_frame_times_us[last_frame_times_us.len() - 1] < current_frame_time_us
+            && current_frame_time_us > max_frame_time
         {
-            max_frame_time = current_frame_time_ms;
+            max_frame_time = current_frame_time_us;
         }
 
         /*
          * Average frame time calculation
          */
-        if last_frame_times_ms.len() as u64 > MAX_SAVED_FRAME_TIMES {
+        if last_frame_times_us.len() as u64 > MAX_SAVED_FRAME_TIMES {
             let mut combined_frame_times: u128 = 0;
 
-            for time_ms in last_frame_times_ms.iter() {
+            for time_ms in last_frame_times_us.iter() {
                 combined_frame_times += time_ms
             }
 
             average_frame_time = combined_frame_times / MAX_SAVED_FRAME_TIMES as u128;
 
-            last_frame_times_ms.clear();
+            last_frame_times_us.clear();
         } else {
-            last_frame_times_ms.push(current_frame_time_ms);
+            last_frame_times_us.push(current_frame_time_us);
         }
 
         /*
          * Text variables update
          */
         average_frame_time_string =
-            "Average frame time: ".to_string() + &average_frame_time.to_string().to_owned() + "ms";
+            "Average frame time: ".to_string() + &format!("{:.4}", (f64::from(average_frame_time as u32) * 0.001).to_string().to_owned()) + "ms";
         max_frame_time_string =
-            "Max frame time: ".to_string() + &max_frame_time.to_string().to_owned() + "ms";
+            "Max frame time: ".to_string() + &format!("{:.4}", (f64::from(max_frame_time as u32) * 0.001).to_string().to_owned()) + "ms";
         iterated_count_text =
             "Iterations: ".to_string() + &fern.iterated_count.to_string().to_owned();
 
@@ -252,9 +273,9 @@ fn main() {
          */
         _time_stamp_frame_end = Instant::now();
 
-        current_frame_time_ms = _time_stamp_frame_end
+        current_frame_time_us = _time_stamp_frame_end
             .saturating_duration_since(time_stamp_frame_start)
-            .as_millis();
+            .as_micros();
     }
 }
 
@@ -377,6 +398,15 @@ impl Fern {
                 .unwrap();
         return fern_texture;
     }
+
+    fn reset(&mut self ) {
+        self.background_drawn = false;
+        self.iterated_count = 0;
+
+        self.values.current_calculated_coords.clear();
+        self.values.current_x = 0.0;
+        self.values.current_y = 0.0;
+    }
 }
 
 struct FernValues {
@@ -385,3 +415,6 @@ struct FernValues {
     pub current_x: f64,
     pub current_y: f64,
 }
+
+
+// Coincidence? I think not.
