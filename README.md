@@ -14,5 +14,5 @@ R resets the generation.
 Keys 1, 2 change the color scheme. 
 
 ## Screenshot
-![fern_live_gen](https://user-images.githubusercontent.com/57567946/115565145-69a4f580-a2b9-11eb-968c-5edbb2e859b2.png)
+![example_fern](https://user-images.githubusercontent.com/57567946/115588180-c4951780-a2ce-11eb-9eb0-054467d474a7.png)
 This is a screenshot of the program generating the fractal, 1,000 iterations every 10ms.
